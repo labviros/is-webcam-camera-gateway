@@ -1,5 +1,6 @@
 {
   "broker_uri": "amqp://localhost:5672",
+  "broker_reconnection": true,
   "camera_id": 4,
   "device": "/dev/video0",
   "resolution": [640, 480],

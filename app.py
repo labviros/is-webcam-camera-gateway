@@ -25,37 +25,44 @@ if options['device'] not in devices:
 cam = pygame.camera.Camera(options['device'], options['resolution'])
 cam.start()
 
-while True:
-    try:
-        channel = Channel(options['broker_uri'])
-        log.info("Connected to {}", options['broker_uri'])
 
-        while True:
-            t0 = time.time()
+def run():
+    channel = Channel(options['broker_uri'])
+    log.info("Connected to {}", options['broker_uri'])
 
-            img = cam.get_image()
-            data = pygame.image.tostring(img, 'RGB')
-            pil_img = pil_image.frombytes('RGB', options['resolution'], data)
+    while True:
+        t0 = time.time()
 
-            if options['flip_v']:
-                pil_img = pil_img.transpose(pil_image.FLIP_TOP_BOTTOM)
-            if options['flip_h']:
-                pil_img = pil_img.transpose(pil_image.FLIP_LEFT_RIGHT)
+        img = cam.get_image()
+        data = pygame.image.tostring(img, 'RGB')
+        pil_img = pil_image.frombytes('RGB', options['resolution'], data)
 
-            bdata = BytesIO()
-            pil_img.save(bdata, 'jpeg')
+        if options['flip_v']:
+            pil_img = pil_img.transpose(pil_image.FLIP_TOP_BOTTOM)
+        if options['flip_h']:
+            pil_img = pil_img.transpose(pil_image.FLIP_LEFT_RIGHT)
 
-            pb_image = Image()
-            pb_image.data = bdata.getvalue()
-            msg = Message(content=pb_image)
-            channel.publish(msg, topic="CameraGateway.{}.Frame".format(options['camera_id']))
+        bdata = BytesIO()
+        pil_img.save(bdata, 'jpeg')
 
-            dt = time.time() - t0
-            log.debug("took_ms={:.1f}", dt * 1e3)
-            interval = max(0.0, 1.0 / options['fps'] - dt)
-            time.sleep(interval)
+        pb_image = Image()
+        pb_image.data = bdata.getvalue()
+        msg = Message(content=pb_image)
+        channel.publish(msg, topic="CameraGateway.{}.Frame".format(options['camera_id']))
 
-    except:
-        pass
+        dt = time.time() - t0
+        log.debug("took_ms={:.1f}", dt * 1e3)
+        interval = max(0.0, 1.0 / options['fps'] - dt)
+        time.sleep(interval)
+
+
+if options['broker_reconnection']:
+    while True:
+        try:
+            run()
+        except:
+            pass
+else:
+    run()
 
 cam.stop()
